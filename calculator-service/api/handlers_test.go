@@ -13,7 +13,8 @@ import (
 	"github.com/stretchr/testify/mock"
 )
 
-type Repository interface {
+// RepositoryInterface определяет интерфейс, который должен реализовывать репозиторий
+type RepositoryInterface interface {
 	CreateUser(ctx context.Context, login, passwordHash string) error
 	GetUserByLogin(ctx context.Context, login string) (*models.User, error)
 	CreateExpression(ctx context.Context, userID, expr string) (string, error)
@@ -21,6 +22,7 @@ type Repository interface {
 	UpdateTaskResult(ctx context.Context, taskID string, result float64) error
 }
 
+// MockRepository реализует RepositoryInterface для тестов
 type MockRepository struct {
 	mock.Mock
 }
@@ -32,6 +34,9 @@ func (m *MockRepository) CreateUser(ctx context.Context, login, passwordHash str
 
 func (m *MockRepository) GetUserByLogin(ctx context.Context, login string) (*models.User, error) {
 	args := m.Called(ctx, login)
+	if args.Get(0) == nil {
+		return nil, args.Error(1)
+	}
 	return args.Get(0).(*models.User), args.Error(1)
 }
 
@@ -42,6 +47,9 @@ func (m *MockRepository) CreateExpression(ctx context.Context, userID, expr stri
 
 func (m *MockRepository) GetPendingTasks(ctx context.Context, limit int) ([]models.Task, error) {
 	args := m.Called(ctx, limit)
+	if args.Get(0) == nil {
+		return nil, args.Error(1)
+	}
 	return args.Get(0).([]models.Task), args.Error(1)
 }
 
@@ -54,7 +62,11 @@ func TestRegisterHandler_Success(t *testing.T) {
 	mockRepo := new(MockRepository)
 	mockRepo.On("CreateUser", mock.Anything, "test", mock.Anything).Return(nil)
 
-	h := NewHandlers(mockRepo, "secret", 24*time.Hour)
+	h := &Handlers{
+		repo:          mockRepo,
+		jwtSecret:     "secret",
+		jwtExpiration: 24 * time.Hour,
+	}
 
 	req := httptest.NewRequest("POST", "/register", strings.NewReader(`{"login":"test","password":"123"}`))
 	req.Header.Set("Content-Type", "application/json")
@@ -63,5 +75,54 @@ func TestRegisterHandler_Success(t *testing.T) {
 	h.RegisterHandler(w, req)
 
 	assert.Equal(t, http.StatusOK, w.Code)
+	mockRepo.AssertExpectations(t)
+}
+
+func TestLoginHandler_Success(t *testing.T) {
+	mockRepo := new(MockRepository)
+	user := &models.User{
+		ID:           "123",
+		Login:        "test",
+		PasswordHash: "$2a$10$fakehash",
+	}
+	mockRepo.On("GetUserByLogin", mock.Anything, "test").Return(user, nil)
+
+	h := &Handlers{
+		repo:          mockRepo,
+		jwtSecret:     "secret",
+		jwtExpiration: 24 * time.Hour,
+	}
+
+	req := httptest.NewRequest("POST", "/login", strings.NewReader(`{"login":"test","password":"123"}`))
+	req.Header.Set("Content-Type", "application/json")
+	w := httptest.NewRecorder()
+
+	h.LoginHandler(w, req)
+
+	assert.Equal(t, http.StatusOK, w.Code)
+	assert.Contains(t, w.Body.String(), "token")
+	mockRepo.AssertExpectations(t)
+}
+
+func TestCalculateHandler_Valid(t *testing.T) {
+	mockRepo := new(MockRepository)
+	mockRepo.On("CreateExpression", mock.Anything, "user123", "2+2").Return("expr123", nil)
+
+	h := &Handlers{
+		repo:          mockRepo,
+		jwtSecret:     "secret",
+		jwtExpiration: 24 * time.Hour,
+	}
+
+	req := httptest.NewRequest("POST", "/calculate", strings.NewReader(`{"expression":"2+2"}`))
+	req.Header.Set("Content-Type", "application/json")
+	ctx := context.WithValue(req.Context(), "user_id", "user123")
+	req = req.WithContext(ctx)
+	w := httptest.NewRecorder()
+
+	h.CalculateHandler(w, req)
+
+	assert.Equal(t, http.StatusAccepted, w.Code)
+	assert.Contains(t, w.Body.String(), "expr123")
 	mockRepo.AssertExpectations(t)
 }
