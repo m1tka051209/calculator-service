@@ -7,13 +7,22 @@ import (
 	
 	"github.com/google/uuid"
 	"github.com/m1tka051209/calculator-service/models"
+	_ "github.com/mattn/go-sqlite3"
 )
 
-type Repository struct {
+type Repository interface {
+	CreateUser(ctx context.Context, login, passwordHash string) error
+	GetUserByLogin(ctx context.Context, login string) (*models.User, error)
+	CreateExpression(ctx context.Context, userID, expr string) (string, error)
+	GetPendingTasks(ctx context.Context, limit int) ([]models.Task, error)
+	UpdateTaskResult(ctx context.Context, taskID string, result float64) error
+}
+
+type SQLiteRepository struct {
 	db *sql.DB
 }
 
-func NewSQLiteRepository(dbPath string) (*Repository, error) {
+func NewSQLiteRepository(dbPath string) (*SQLiteRepository, error) {
 	db, err := sql.Open("sqlite3", dbPath)
 	if err != nil {
 		return nil, fmt.Errorf("failed to open database: %w", err)
@@ -23,7 +32,7 @@ func NewSQLiteRepository(dbPath string) (*Repository, error) {
 		return nil, fmt.Errorf("failed to create tables: %w", err)
 	}
 
-	return &Repository{db: db}, nil
+	return &SQLiteRepository{db: db}, nil
 }
 
 func createTables(db *sql.DB) error {
@@ -57,14 +66,14 @@ func createTables(db *sql.DB) error {
 	return err
 }
 
-func (r *Repository) CreateUser(ctx context.Context, login, passwordHash string) error {
+func (r *SQLiteRepository) CreateUser(ctx context.Context, login, passwordHash string) error {
 	_, err := r.db.ExecContext(ctx,
 		"INSERT INTO users(id, login, password_hash) VALUES(?, ?, ?)",
 		uuid.New().String(), login, passwordHash)
 	return err
 }
 
-func (r *Repository) GetUserByLogin(ctx context.Context, login string) (*models.User, error) {
+func (r *SQLiteRepository) GetUserByLogin(ctx context.Context, login string) (*models.User, error) {
 	var user models.User
 	err := r.db.QueryRowContext(ctx,
 		"SELECT id, login, password_hash FROM users WHERE login = ?", login).
@@ -75,7 +84,7 @@ func (r *Repository) GetUserByLogin(ctx context.Context, login string) (*models.
 	return &user, nil
 }
 
-func (r *Repository) CreateExpression(ctx context.Context, userID, expr string) (string, error) {
+func (r *SQLiteRepository) CreateExpression(ctx context.Context, userID, expr string) (string, error) {
 	id := uuid.New().String()
 	_, err := r.db.ExecContext(ctx,
 		"INSERT INTO expressions(id, user_id, expression, status) VALUES(?, ?, ?, 'pending')",
@@ -83,7 +92,7 @@ func (r *Repository) CreateExpression(ctx context.Context, userID, expr string) 
 	return id, err
 }
 
-func (r *Repository) GetPendingTasks(ctx context.Context, limit int) ([]models.Task, error) {
+func (r *SQLiteRepository) GetPendingTasks(ctx context.Context, limit int) ([]models.Task, error) {
 	rows, err := r.db.QueryContext(ctx,
 		`SELECT id, expression_id, arg1, arg2, operation, operation_time 
 		 FROM tasks WHERE status = 'pending' LIMIT ?`, limit)
@@ -104,7 +113,7 @@ func (r *Repository) GetPendingTasks(ctx context.Context, limit int) ([]models.T
 	return tasks, nil
 }
 
-func (r *Repository) UpdateTaskResult(ctx context.Context, taskID string, result float64) error {
+func (r *SQLiteRepository) UpdateTaskResult(ctx context.Context, taskID string, result float64) error {
 	_, err := r.db.ExecContext(ctx,
 		`UPDATE tasks SET status = 'completed', result = ? WHERE id = ?`,
 		result, taskID)

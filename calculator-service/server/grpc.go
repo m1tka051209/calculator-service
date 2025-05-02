@@ -34,10 +34,10 @@ func (UnimplementedCalculatorServer) mustEmbedUnimplementedCalculatorServer() {}
 
 type GRPCServer struct {
 	UnimplementedCalculatorServer
-	repo *db.Repository
+	repo db.Repository
 }
 
-func NewGRPCServer(repo *db.Repository) *GRPCServer {
+func NewGRPCServer(repo db.Repository) *GRPCServer {
 	return &GRPCServer{repo: repo}
 }
 

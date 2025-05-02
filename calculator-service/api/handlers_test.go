@@ -8,21 +8,12 @@ import (
 	"testing"
 	"time"
 
+	// "github.com/m1tka051209/calculator-service/db"
 	"github.com/m1tka051209/calculator-service/models"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
 )
 
-// RepositoryInterface определяет интерфейс, который должен реализовывать репозиторий
-type RepositoryInterface interface {
-	CreateUser(ctx context.Context, login, passwordHash string) error
-	GetUserByLogin(ctx context.Context, login string) (*models.User, error)
-	CreateExpression(ctx context.Context, userID, expr string) (string, error)
-	GetPendingTasks(ctx context.Context, limit int) ([]models.Task, error)
-	UpdateTaskResult(ctx context.Context, taskID string, result float64) error
-}
-
-// MockRepository реализует RepositoryInterface для тестов
 type MockRepository struct {
 	mock.Mock
 }
@@ -59,7 +50,7 @@ func (m *MockRepository) UpdateTaskResult(ctx context.Context, taskID string, re
 }
 
 func TestRegisterHandler_Success(t *testing.T) {
-	mockRepo := new(MockRepository)
+	mockRepo := &MockRepository{}
 	mockRepo.On("CreateUser", mock.Anything, "test", mock.Anything).Return(nil)
 
 	h := &Handlers{
@@ -79,7 +70,7 @@ func TestRegisterHandler_Success(t *testing.T) {
 }
 
 func TestLoginHandler_Success(t *testing.T) {
-	mockRepo := new(MockRepository)
+	mockRepo := &MockRepository{}
 	user := &models.User{
 		ID:           "123",
 		Login:        "test",
@@ -105,7 +96,7 @@ func TestLoginHandler_Success(t *testing.T) {
 }
 
 func TestCalculateHandler_Valid(t *testing.T) {
-	mockRepo := new(MockRepository)
+	mockRepo := &MockRepository{}
 	mockRepo.On("CreateExpression", mock.Anything, "user123", "2+2").Return("expr123", nil)
 
 	h := &Handlers{

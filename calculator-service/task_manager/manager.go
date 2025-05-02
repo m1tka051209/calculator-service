@@ -7,10 +7,10 @@ import (
 )
 
 type TaskManager struct {
-	repo *db.Repository
+	repo db.Repository
 }
 
-func NewTaskManager(repo *db.Repository) *TaskManager {
+func NewTaskManager(repo db.Repository) *TaskManager {
 	return &TaskManager{repo: repo}
 }
 

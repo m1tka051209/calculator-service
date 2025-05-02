@@ -5,18 +5,17 @@ import (
 	"net/http"
 	"time"
 	
-	"github.com/golang-jwt/jwt/v5"
 	"github.com/m1tka051209/calculator-service/db"
 	"golang.org/x/crypto/bcrypt"
 )
 
 type Handlers struct {
-	repo          *db.Repository
+	repo          db.Repository
 	jwtSecret     string
 	jwtExpiration time.Duration
 }
 
-func NewHandlers(repo *db.Repository, jwtSecret string, jwtExpiration time.Duration) *Handlers {
+func NewHandlers(repo db.Repository, jwtSecret string, jwtExpiration time.Duration) *Handlers {
 	return &Handlers{
 		repo:          repo,
 		jwtSecret:     jwtSecret,
@@ -72,12 +71,7 @@ func (h *Handlers) LoginHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	token := jwt.NewWithClaims(jwt.SigningMethodHS256, jwt.MapClaims{
-		"sub": user.ID,
-		"exp": time.Now().Add(h.jwtExpiration).Unix(),
-	})
-
-	tokenString, err := token.SignedString([]byte(h.jwtSecret))
+	tokenString, err := h.GenerateToken(user.ID)
 	if err != nil {
 		respondError(w, http.StatusInternalServerError, "failed to generate token")
 		return
