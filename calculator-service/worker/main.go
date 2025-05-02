@@ -1,71 +1,59 @@
 package main
 
 import (
-    "bytes"
-    "encoding/json"
-    "fmt"
-    "log"
-    "net/http"
-    "time"
+	// "context"
+	"log"
+	"time"
+	"github.com/m1tka051209/calculator-service/config"
+	"github.com/m1tka051209/calculator-service/db"
+	"github.com/m1tka051209/calculator-service/models"
+	"github.com/m1tka051209/calculator-service/task_manager"
 )
 
-type Task struct {
-    ID            string  `json:"id"`
-    Arg1          float64 `json:"arg1"`
-    Arg2          float64 `json:"arg2"`
-    Operation     string  `json:"operation"`
-    OperationTime int     `json:"operation_time"`
-}
-
 func main() {
-    for {
-        task, err := fetchTask()
-        if err != nil {
-            log.Println("Fetch task error:", err)
-            time.Sleep(2 * time.Second)
-            continue
-        }
+	cfg := config.Load()
+	
+	repo, err := db.NewSQLiteRepository(cfg.DBPath)
+	if err != nil {
+		log.Fatalf("Failed to initialize database: %v", err)
+	}
 
-        result := calculate(task)
-        if err := submitResult(task.ID, result); err != nil {
-            log.Println("Submit result error:", err)
-        }
-    }
+	tm := task_manager.NewTaskManager(repo)
+
+	for {
+		task, err := tm.GetNextTask()
+		if err != nil {
+			log.Printf("Error getting task: %v", err)
+			time.Sleep(2 * time.Second)
+			continue
+		}
+
+		if task == nil {
+			time.Sleep(1 * time.Second)
+			continue
+		}
+
+		result := calculate(task)
+		if err := tm.SaveTaskResult(task.ID, result); err != nil {
+			log.Printf("Error saving result: %v", err)
+		}
+	}
 }
 
-func fetchTask() (*Task, error) {
-    resp, err := http.Get("http://localhost:8080/internal/task")
-    if err != nil {
-        return nil, err
-    }
-    defer resp.Body.Close()
-
-    if resp.StatusCode == http.StatusNotFound {
-        return nil, nil
-    }
-
-    var task Task
-    if err := json.NewDecoder(resp.Body).Decode(&task); err != nil {
-        return nil, err
-    }
-    return &task, nil
-}
-
-func submitResult(taskID string, result float64) error {
-    payload := struct {
-        TaskID string  `json:"task_id"`
-        Result float64 `json:"result"`
-    }{taskID, result}
-
-    jsonData, _ := json.Marshal(payload)
-    resp, err := http.Post("http://localhost:8080/internal/result", "application/json", bytes.NewBuffer(jsonData))
-    if err != nil {
-        return err
-    }
-    defer resp.Body.Close()
-
-    if resp.StatusCode != http.StatusOK {
-        return fmt.Errorf("unexpected status: %d", resp.StatusCode)
-    }
-    return nil
+func calculate(task *models.Task) float64 {
+	switch task.Operation {
+	case "+":
+		return task.Arg1 + task.Arg2
+	case "-":
+		return task.Arg1 - task.Arg2
+	case "*":
+		return task.Arg1 * task.Arg2
+	case "/":
+		if task.Arg2 == 0 {
+			return 0
+		}
+		return task.Arg1 / task.Arg2
+	default:
+		return 0
+	}
 }

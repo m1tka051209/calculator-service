@@ -1,38 +1,50 @@
 package config
 
 import (
-    "os"
-    "time"
+	"os"
+	"strconv"
+	"time"
 )
 
 type Config struct {
-    HTTPPort         string
-    DBPath          string
-    JWTSecret       string
-    TokenExpiration time.Duration
+	HTTPPort        string
+	DBPath          string
+	JWTSecret       string
+	TokenExpiration time.Duration
+	WorkerPoolSize  int
 }
 
 func Load() *Config {
-    return &Config{
-        HTTPPort:         getEnv("HTTP_PORT", "8080"),
-        DBPath:          getEnv("DB_PATH", "data.db"),
-        JWTSecret:       getEnv("JWT_SECRET", "default-secret-key"),
-        TokenExpiration: getEnvAsDuration("TOKEN_EXPIRATION", 24*time.Hour),
-    }
+	return &Config{
+		HTTPPort:        getEnv("HTTP_PORT", "8080"),
+		DBPath:          getEnv("DB_PATH", "data.db"),
+		JWTSecret:       getEnv("JWT_SECRET", "default-secret"),
+		TokenExpiration: getEnvAsDuration("TOKEN_EXPIRATION", 24*time.Hour),
+		WorkerPoolSize:  getEnvAsInt("WORKER_POOL_SIZE", 5),
+	}
 }
 
 func getEnv(key, defaultValue string) string {
-    if value, exists := os.LookupEnv(key); exists {
-        return value
-    }
-    return defaultValue
+	if value, exists := os.LookupEnv(key); exists {
+		return value
+	}
+	return defaultValue
 }
 
 func getEnvAsDuration(key string, defaultValue time.Duration) time.Duration {
-    if value, exists := os.LookupEnv(key); exists {
-        if duration, err := time.ParseDuration(value); err == nil {
-            return duration
-        }
-    }
-    return defaultValue
+	if value, exists := os.LookupEnv(key); exists {
+		if duration, err := time.ParseDuration(value); err == nil {
+			return duration
+		}
+	}
+	return defaultValue
+}
+
+func getEnvAsInt(key string, defaultValue int) int {
+	if value, exists := os.LookupEnv(key); exists {
+		if num, err := strconv.Atoi(value); err == nil {
+			return num
+		}
+	}
+	return defaultValue
 }
