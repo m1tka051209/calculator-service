@@ -1,7 +1,6 @@
 package api
 
 import (
-	// "context"
 	"encoding/json"
 	"net/http"
 	"time"
@@ -10,7 +9,6 @@ import (
 	"github.com/m1tka051209/calculator-service/db"
 	"golang.org/x/crypto/bcrypt"
 )
-
 
 type Handlers struct {
 	repo          *db.Repository

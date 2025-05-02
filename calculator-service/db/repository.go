@@ -7,7 +7,6 @@ import (
 	
 	"github.com/google/uuid"
 	"github.com/m1tka051209/calculator-service/models"
-	"github.com/mattn/go-sqlite3"
 )
 
 type Repository struct {

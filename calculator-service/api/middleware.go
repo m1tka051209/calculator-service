@@ -7,6 +7,10 @@ import (
 	"github.com/golang-jwt/jwt/v5"
 )
 
+type contextKey string
+
+const userIDKey contextKey = "userID"
+
 func AuthMiddleware(h *Handlers, next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		authHeader := r.Header.Get("Authorization")
@@ -28,7 +32,7 @@ func AuthMiddleware(h *Handlers, next http.Handler) http.Handler {
 		claims := token.Claims.(jwt.MapClaims)
 		userID := claims["sub"].(string)
 
-		ctx := context.WithValue(r.Context(), "user_id", userID)
+		ctx := context.WithValue(r.Context(), userIDKey, userID)
 		next.ServeHTTP(w, r.WithContext(ctx))
 	})
 }
