@@ -7,7 +7,7 @@ import (
 	
 	"github.com/google/uuid"
 	"github.com/m1tka051209/calculator-service/models"
-	_ "github.com/mattn/go-sqlite3"
+    _ "modernc.org/sqlite"
 )
 
 type Repository interface {
