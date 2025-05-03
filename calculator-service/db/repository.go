@@ -23,8 +23,8 @@ type SQLiteRepository struct {
 }
 
 func NewSQLiteRepository(dbPath string) (*SQLiteRepository, error) {
-	db, err := sql.Open("sqlite3", dbPath)
-	if err != nil {
+    db, err := sql.Open("sqlite", dbPath)
+    if err != nil {
 		return nil, fmt.Errorf("failed to open database: %w", err)
 	}
 
