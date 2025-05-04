@@ -23,17 +23,16 @@ func main() {
 	if err != nil {
 		log.Fatalf("Failed to initialize database: %v", err)
 	}
+	
+	repository := db.Repository(repo)
 
-	// Контекст для graceful shutdown
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
-	// Запуск менеджера задач
-	tm := task_manager.NewTaskManager(repo)
+	tm := task_manager.NewTaskManager(repository)
 	go taskWorker(ctx, tm, cfg.WorkerPoolSize)
 
-	// Настройка HTTP сервера
-	handlers := api.NewHandlers(repo, cfg.JWTSecret, cfg.TokenExpiration)
+	handlers := api.NewHandlers(repository, cfg.JWTSecret, cfg.TokenExpiration)
 	router := http.NewServeMux()
 	router.HandleFunc("/api/v1/register", handlers.RegisterHandler)
 	router.HandleFunc("/api/v1/login", handlers.LoginHandler)
@@ -44,7 +43,6 @@ func main() {
 		Handler: router,
 	}
 
-	// Graceful shutdown
 	go func() {
 		sigChan := make(chan os.Signal, 1)
 		signal.Notify(sigChan, syscall.SIGINT, syscall.SIGTERM)

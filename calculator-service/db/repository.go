@@ -4,10 +4,10 @@ import (
 	"context"
 	"database/sql"
 	"fmt"
-	
+
 	"github.com/google/uuid"
 	"github.com/m1tka051209/calculator-service/models"
-    _ "modernc.org/sqlite"
+	_ "modernc.org/sqlite"
 )
 
 type Repository interface {
@@ -23,10 +23,12 @@ type SQLiteRepository struct {
 }
 
 func NewSQLiteRepository(dbPath string) (*SQLiteRepository, error) {
-    db, err := sql.Open("sqlite", dbPath)
-        if err != nil {
+	db, err := sql.Open("sqlite", dbPath+"?_journal_mode=WAL&_timeout=5000&_busy_timeout=5000")
+	if err != nil {
 		return nil, fmt.Errorf("failed to open database: %w", err)
 	}
+	db.SetMaxOpenConns(1)
+	db.SetMaxIdleConns(1)
 
 	if err := createTables(db); err != nil {
 		return nil, fmt.Errorf("failed to create tables: %w", err)
@@ -93,7 +95,13 @@ func (r *SQLiteRepository) CreateExpression(ctx context.Context, userID, expr st
 }
 
 func (r *SQLiteRepository) GetPendingTasks(ctx context.Context, limit int) ([]models.Task, error) {
-	rows, err := r.db.QueryContext(ctx,
+	tx, err := r.db.BeginTx(ctx, &sql.TxOptions{Isolation: sql.LevelSerializable})
+	if err != nil {
+		return nil, err
+	}
+	defer tx.Rollback()
+
+	rows, err := tx.QueryContext(ctx,
 		`SELECT id, expression_id, arg1, arg2, operation, operation_time 
 		 FROM tasks WHERE status = 'pending' LIMIT ?`, limit)
 	if err != nil {
@@ -110,6 +118,11 @@ func (r *SQLiteRepository) GetPendingTasks(ctx context.Context, limit int) ([]mo
 		}
 		tasks = append(tasks, t)
 	}
+
+	if err := tx.Commit(); err != nil {
+		return nil, err
+	}
+
 	return tasks, nil
 }
 

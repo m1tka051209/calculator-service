@@ -12,6 +12,7 @@ type Config struct {
 	JWTSecret       string
 	TokenExpiration time.Duration
 	WorkerPoolSize  int
+	WorkerTimeout   time.Duration
 }
 
 func Load() *Config {
@@ -21,6 +22,7 @@ func Load() *Config {
 		JWTSecret:       getEnv("JWT_SECRET", "default-secret"),
 		TokenExpiration: getEnvAsDuration("TOKEN_EXPIRATION", 24*time.Hour),
 		WorkerPoolSize:  getEnvAsInt("WORKER_POOL_SIZE", 5),
+		WorkerTimeout:   getEnvAsDuration("WORKER_TIMEOUT", 5*time.Second),
 	}
 }
 
