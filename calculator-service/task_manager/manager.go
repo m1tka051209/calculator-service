@@ -2,6 +2,8 @@ package task_manager
 
 import (
 	"context"
+	"time"
+
 	"github.com/m1tka051209/calculator-service/db"
 	"github.com/m1tka051209/calculator-service/models"
 )
@@ -14,13 +16,11 @@ func NewTaskManager(repo db.Repository) *TaskManager {
 	return &TaskManager{repo: repo}
 }
 
-func (tm *TaskManager) CreateTasksFromExpression(exprID, expr string) error {
-	// TODO: Реализовать парсинг выражения на задачи
-	return nil
-}
-
 func (tm *TaskManager) GetNextTask() (*models.Task, error) {
-	tasks, err := tm.repo.GetPendingTasks(context.Background(), 1)
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+	
+	tasks, err := tm.repo.GetPendingTasks(ctx, 1)
 	if err != nil || len(tasks) == 0 {
 		return nil, err
 	}
