@@ -1,5 +1,6 @@
 /bin/
 /data.db
+/worker_data.db
 /.env
 *.test
 *.out
@@ -7,3 +8,5 @@
 /go.sum
 .DS_Store
 .idea/
+/worker.log
+/worker/worker.log
