@@ -25,7 +25,7 @@ func Load() *Config {
 		TokenExpiration: getEnvAsDuration("TOKEN_EXPIRATION", 24*time.Hour),
 		WorkerPoolSize:  getEnvAsInt("WORKER_POOL_SIZE", 5),
 		WorkerTimeout:   getEnvAsDuration("WORKER_TIMEOUT", 5*time.Second),
-		WorkerDBPath:    getEnv("WORKER_DB_PATH", "worker_data.db"),
+        WorkerDBPath: getEnv("WORKER_DB_PATH", "data.db"),
 		WorkerLogPath:   getEnv("WORKER_LOG_PATH", "worker.log"),
 	}
 }
