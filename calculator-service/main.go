@@ -10,7 +10,7 @@ import (
 	"time"
 
 	"github.com/m1tka051209/calculator-service/api"
-	"github.com/m1tka051209/calculator-service/calculator"
+    "github.com/m1tka051209/calculator-service/calculator"
 	"github.com/m1tka051209/calculator-service/config"
 	"github.com/m1tka051209/calculator-service/db"
 	"github.com/m1tka051209/calculator-service/task_manager"
