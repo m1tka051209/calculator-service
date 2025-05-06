@@ -1,38 +1,41 @@
 package api
 
 import (
-	"context"
-	"net/http"
-	"strings"
-	"github.com/golang-jwt/jwt/v5"
+    "context"
+    "net/http"
+    "strings"
+
+    "github.com/golang-jwt/jwt/v5"
 )
 
-type contextKey string
-
-const userIDKey contextKey = "userID"
-
 func AuthMiddleware(h *Handlers, next http.Handler) http.Handler {
-	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		authHeader := r.Header.Get("Authorization")
-		if authHeader == "" {
-			respondError(w, http.StatusUnauthorized, "authorization header is required")
-			return
-		}
+    return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+        authHeader := r.Header.Get("Authorization")
+        if authHeader == "" {
+            respondError(w, http.StatusUnauthorized, "authorization header is required")
+            return
+        }
 
-		tokenString := strings.TrimPrefix(authHeader, "Bearer ")
-		token, err := jwt.Parse(tokenString, func(token *jwt.Token) (interface{}, error) {
-			return []byte(h.jwtSecret), nil
-		})
+        tokenString := strings.TrimPrefix(authHeader, "Bearer ")
+        token, err := jwt.Parse(tokenString, func(token *jwt.Token) (interface{}, error) {
+            return []byte(h.jwtSecret), nil
+        })
 
-		if err != nil || !token.Valid {
-			respondError(w, http.StatusUnauthorized, "invalid token")
-			return
-		}
+        if err != nil || !token.Valid {
+            respondError(w, http.StatusUnauthorized, "invalid token")
+            return
+        }
 
-		claims := token.Claims.(jwt.MapClaims)
-		userID := claims["sub"].(string)
+        claims := token.Claims.(jwt.MapClaims)
+        userID := claims["sub"].(string)
 
-		ctx := context.WithValue(r.Context(), userIDKey, userID)
-		next.ServeHTTP(w, r.WithContext(ctx))
-	})
+        ctx := context.WithValue(r.Context(), UserIDKey, userID)
+        next.ServeHTTP(w, r.WithContext(ctx))
+    })
+}
+
+func respondError(w http.ResponseWriter, statusCode int, message string) {
+    w.Header().Set("Content-Type", "application/json")
+    w.WriteHeader(statusCode)
+    w.Write([]byte(`{"error":"` + message + `"}`))
 }

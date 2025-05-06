@@ -24,7 +24,7 @@ func Load() *Config {
 		JWTSecret:       getEnv("JWT_SECRET", "default-secret"),
 		TokenExpiration: getEnvAsDuration("TOKEN_EXPIRATION", 24*time.Hour),
 		WorkerPoolSize:  getEnvAsInt("WORKER_POOL_SIZE", 5),
-		WorkerTimeout:   getEnvAsDuration("WORKER_TIMEOUT", 5*time.Second),
+        WorkerTimeout: getEnvAsDuration("WORKER_TIMEOUT", 30*time.Second),
         WorkerDBPath: getEnv("WORKER_DB_PATH", "data.db"),
 		WorkerLogPath:   getEnv("WORKER_LOG_PATH", "worker.log"),
 	}
