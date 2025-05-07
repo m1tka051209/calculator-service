@@ -10,7 +10,6 @@ import (
 	"time"
 
 	"github.com/m1tka051209/calculator-service/api"
-    "github.com/m1tka051209/calculator-service/calculator"
 	"github.com/m1tka051209/calculator-service/config"
 	"github.com/m1tka051209/calculator-service/db"
 	"github.com/m1tka051209/calculator-service/task_manager"
@@ -23,40 +22,29 @@ func main() {
 	if err != nil {
 		log.Fatalf("Failed to initialize database: %v", err)
 	}
-	
-	repository := db.Repository(repo)
+	defer repo.(*db.SQLiteRepository).Close()
 
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
-	tm := task_manager.NewTaskManager(repository)
+	tm := task_manager.NewTaskManager(repo)
 	go taskWorker(ctx, tm, cfg.WorkerPoolSize)
 
-	handlers := api.NewHandlers(repository, cfg.JWTSecret, cfg.TokenExpiration)
+	handlers := api.NewHandlers(repo, cfg.JWTSecret, cfg.TokenExpiration)
 	router := http.NewServeMux()
+	
+	// Регистрация endpoints
 	router.HandleFunc("/api/v1/register", handlers.RegisterHandler)
 	router.HandleFunc("/api/v1/login", handlers.LoginHandler)
 	router.Handle("/api/v1/calculate", api.AuthMiddleware(handlers, http.HandlerFunc(handlers.CalculateHandler)))
+	router.Handle("/api/v1/expressions", api.AuthMiddleware(handlers, http.HandlerFunc(handlers.GetExpressionsHandler)))
 
 	server := &http.Server{
 		Addr:    ":" + cfg.HTTPPort,
 		Handler: router,
 	}
 
-	go func() {
-		sigChan := make(chan os.Signal, 1)
-		signal.Notify(sigChan, syscall.SIGINT, syscall.SIGTERM)
-		<-sigChan
-
-		log.Println("Shutting down server...")
-		shutdownCtx, shutdownCancel := context.WithTimeout(context.Background(), 5*time.Second)
-		defer shutdownCancel()
-
-		if err := server.Shutdown(shutdownCtx); err != nil {
-			log.Printf("Server shutdown error: %v", err)
-		}
-		cancel() // Остановка воркеров
-	}()
+	go gracefulShutdown(server, cancel)
 
 	log.Printf("Server started on :%s", cfg.HTTPPort)
 	if err := server.ListenAndServe(); err != nil && err != http.ErrServerClosed {
@@ -85,12 +73,25 @@ func taskWorker(ctx context.Context, tm *task_manager.TaskManager, poolSize int)
 						continue
 					}
 
-					result := calculator.Calculate(task)
-					if err := tm.SaveTaskResult(task.ID, result); err != nil {
-						log.Printf("Worker %d error saving result: %v", workerID, err)
-					}
+					// Здесь должна быть обработка задачи
+					time.Sleep(100 * time.Millisecond) // Заглушка
 				}
 			}
 		}(i)
 	}
+}
+
+func gracefulShutdown(server *http.Server, cancel context.CancelFunc) {
+	sigChan := make(chan os.Signal, 1)
+	signal.Notify(sigChan, syscall.SIGINT, syscall.SIGTERM)
+	<-sigChan
+
+	log.Println("Shutting down server...")
+	shutdownCtx, shutdownCancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer shutdownCancel()
+
+	if err := server.Shutdown(shutdownCtx); err != nil {
+		log.Printf("Server shutdown error: %v", err)
+	}
+	cancel()
 }

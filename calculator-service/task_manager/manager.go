@@ -40,3 +40,7 @@ func (tm *TaskManager) SaveTaskResult(taskID string, result float64) error {
 
 	return tm.repo.UpdateTaskResult(ctx, taskID, result)
 }
+
+func (tm *TaskManager) UpdateTaskStatus(ctx context.Context, taskID, status string) error {
+	return tm.repo.UpdateTaskStatus(ctx, taskID, status)
+}
