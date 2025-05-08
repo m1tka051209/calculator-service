@@ -22,7 +22,7 @@ func main() {
 	if err != nil {
 		log.Fatalf("Failed to initialize database: %v", err)
 	}
-	defer repo.(*db.SQLiteRepository).Close()
+	defer repo.Close()
 
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
@@ -32,7 +32,7 @@ func main() {
 
 	handlers := api.NewHandlers(repo, cfg.JWTSecret, cfg.TokenExpiration)
 	router := http.NewServeMux()
-	
+
 	// Регистрация endpoints
 	router.HandleFunc("/api/v1/register", handlers.RegisterHandler)
 	router.HandleFunc("/api/v1/login", handlers.LoginHandler)

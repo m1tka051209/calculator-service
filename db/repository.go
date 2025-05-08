@@ -18,6 +18,7 @@ type Repository interface {
 	GetPendingTasks(ctx context.Context, limit int) ([]models.Task, error)
 	UpdateTaskResult(ctx context.Context, taskID string, result float64) error
 	UpdateTaskStatus(ctx context.Context, taskID, status string) error
+	Close() error
 }
 
 type SQLiteRepository struct {

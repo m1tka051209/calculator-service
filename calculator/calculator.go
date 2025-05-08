@@ -3,6 +3,7 @@ package calculator
 import (
 	"github.com/m1tka051209/calculator-service/models"
 	"time"
+	"unicode"
 )
 
 func Calculate(task *models.Task) float64 {
@@ -32,4 +33,13 @@ func ValidateOperation(op string) bool {
 	default:
 		return false
 	}
+}
+
+func ValidateExpression(expr string) bool {
+    for _, c := range expr {
+        if !unicode.IsDigit(c) && c != '+' && c != '-' && c != '*' && c != '/' && c != ' ' {
+            return false
+        }
+    }
+    return true
 }

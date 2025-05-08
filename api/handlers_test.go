@@ -13,25 +13,6 @@ import (
     "github.com/stretchr/testify/mock"
 )
 
-type MockRepository struct {
-    mock.Mock
-}
-
-func (m *MockRepository) CreateUser(ctx context.Context, login, passwordHash string) error {
-    args := m.Called(ctx, login, passwordHash)
-    return args.Error(0)
-}
-
-func (m *MockRepository) GetUserByLogin(ctx context.Context, login string) (*models.User, error) {
-    args := m.Called(ctx, login)
-    return args.Get(0).(*models.User), args.Error(1)
-}
-
-func (m *MockRepository) CreateExpression(ctx context.Context, userID, expr string) (string, error) {
-    args := m.Called(ctx, userID, expr)
-    return args.String(0), args.Error(1)
-}
-
 func TestCalculateHandler_Valid(t *testing.T) {
     mockRepo := &MockRepository{}
     mockRepo.On("CreateExpression", mock.Anything, "user123", "2+2").Return("expr123", nil)
@@ -54,19 +35,6 @@ func TestCalculateHandler_Valid(t *testing.T) {
     assert.Equal(t, http.StatusAccepted, w.Code)
     assert.Contains(t, w.Body.String(), "expr123")
     mockRepo.AssertExpectations(t)
-}
-
-func (m *MockRepository) GetPendingTasks(ctx context.Context, limit int) ([]models.Task, error) {
-    args := m.Called(ctx, limit)
-    if args.Get(0) == nil {
-        return nil, args.Error(1)
-    }
-    return args.Get(0).([]models.Task), args.Error(1)
-}
-
-func (m *MockRepository) UpdateTaskResult(ctx context.Context, taskID string, result float64) error {
-    args := m.Called(ctx, taskID, result)
-    return args.Error(0)
 }
 
 func TestRegisterHandler_Success(t *testing.T) {

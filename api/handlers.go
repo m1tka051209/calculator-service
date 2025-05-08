@@ -1,7 +1,6 @@
 package api
 
 import (
-	"context"
 	"encoding/json"
 	"net/http"
 	"time"
@@ -9,6 +8,7 @@ import (
 	"github.com/m1tka051209/calculator-service/calculator"
 	"github.com/m1tka051209/calculator-service/db"
 	"golang.org/x/crypto/bcrypt"
+	"github.com/golang-jwt/jwt/v5"
 )
 
 type Handlers struct {
@@ -49,6 +49,14 @@ func (h *Handlers) RegisterHandler(w http.ResponseWriter, r *http.Request) {
 
 	w.WriteHeader(http.StatusOK)
 	json.NewEncoder(w).Encode(map[string]string{"status": "OK"})
+}
+
+func (h *Handlers) GenerateToken(userID string) (string, error) {
+	token := jwt.NewWithClaims(jwt.SigningMethodHS256, jwt.MapClaims{
+		"sub": userID,
+		"exp": time.Now().Add(h.jwtExpiration).Unix(),
+	})
+	return token.SignedString([]byte(h.jwtSecret))
 }
 
 func (h *Handlers) LoginHandler(w http.ResponseWriter, r *http.Request) {
@@ -113,7 +121,7 @@ func (h *Handlers) CalculateHandler(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusAccepted)
 	json.NewEncoder(w).Encode(map[string]string{
 		"expression_id": exprID,
-		"status":       "pending",
+		"status":        "pending",
 	})
 }
 

@@ -2,7 +2,6 @@ package main
 
 import (
 	"context"
-	"database/sql"
 	"log"
 	"os"
 	"os/signal"
@@ -14,7 +13,6 @@ import (
 	"github.com/m1tka051209/calculator-service/db"
 	"github.com/m1tka051209/calculator-service/models"
 	"github.com/m1tka051209/calculator-service/task_manager"
-	_ "modernc.org/sqlite"
 )
 
 func main() {
@@ -33,7 +31,7 @@ func main() {
 	if err != nil {
 		log.Fatalf("Failed to initialize database: %v", err)
 	}
-	defer repo.(*db.SQLiteRepository).Close()
+	defer repo.Close()
 
 	// Инициализация менеджера задач
 	tm := task_manager.NewTaskManager(repo)
@@ -112,7 +110,7 @@ func processTask(ctx context.Context, tm *task_manager.TaskManager, workerID int
 	result := calculator.Calculate(calcTask)
 
 	// Сохраняем результат
-	if err := tm.SaveTaskResult(ctx, task.ID, result); err != nil {
+	if err := tm.SaveTaskResult(task.ID, result); err != nil {
 		log.Printf("Worker %d error saving task result: %v", workerID, err)
 		return
 	}
