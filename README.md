@@ -42,6 +42,9 @@ curl --location 'http://localhost:8080/api/v1/register' \
   "login": "user1",
   "password": "password123"
 }'
+Ответ:
+
+{"status":"OK"}
 Авторизация
 bash
 curl --location 'http://localhost:8080/api/v1/login' \
@@ -54,7 +57,7 @@ curl --location 'http://localhost:8080/api/v1/login' \
 
 json
 {
-  "token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
+  "token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJleHAiOjE3NDY4OTI5NDQsInN1YiI6InVzZXIxMjMifQ.jyfvXX4EtoxM0d7o2LpYbEmbWdwCmc69rLrZefn-RGQ"
 }
 Создание выражения
 bash
