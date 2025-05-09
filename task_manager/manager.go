@@ -34,13 +34,10 @@ func (tm *TaskManager) GetNextTask() (*models.Task, error) {
 	return &tasks[0], nil
 }
 
-func (tm *TaskManager) SaveTaskResult(taskID string, result float64) error {
-	ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
-	defer cancel()
-
-	return tm.repo.UpdateTaskResult(ctx, taskID, result)
-}
-
 func (tm *TaskManager) UpdateTaskStatus(ctx context.Context, taskID, status string) error {
 	return tm.repo.UpdateTaskStatus(ctx, taskID, status)
+}
+
+func (tm *TaskManager) UpdateTaskResult(ctx context.Context, taskID string, result float64) error {
+	return tm.repo.UpdateTaskResult(ctx, taskID, result)
 }
