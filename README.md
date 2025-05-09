@@ -26,7 +26,7 @@ git clone https://github.com/m1tka051209/calculator-service.git
 cd calculator-service
 
 # 2. Установка зависимостей
-go mod download
+go mod tidy
 
 # 3. Запуск сервиса
 go run main.go
