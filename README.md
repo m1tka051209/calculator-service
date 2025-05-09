@@ -1,7 +1,6 @@
 # 🧮 Distributed Arithmetic Calculator | Калькулятор арифметических выражений
 
 ![Go Version](https://img.shields.io/badge/go-1.21%2B-blue)
-![License](https://img.shields.io/badge/license-MIT-green)
 ![Database](https://img.shields.io/badge/database-SQLite-lightgrey)
 
 ## 📝 Описание проекта
