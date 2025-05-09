@@ -9,11 +9,18 @@ import (
 	"github.com/m1tka051209/calculator-service/models"
 )
 
+// TaskManagerInterface определяет интерфейс менеджера задач
+type TaskManagerInterface interface {
+	GetNextTask() (*models.Task, error)
+	UpdateTaskStatus(ctx context.Context, taskID, status string) error
+	UpdateTaskResult(ctx context.Context, taskID string, result float64) error
+}
+
 type TaskManager struct {
 	repo db.Repository
 }
 
-func NewTaskManager(repo db.Repository) *TaskManager {
+func NewTaskManager(repo db.Repository) TaskManagerInterface {
 	return &TaskManager{repo: repo}
 }
 

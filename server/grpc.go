@@ -2,28 +2,78 @@ package server
 
 import (
 	"context"
+	"log"
 	"net"
-	
+
+	"github.com/m1tka051209/calculator-service/calculator"
 	"github.com/m1tka051209/calculator-service/db"
+	"github.com/m1tka051209/calculator-service/models"
 	"google.golang.org/grpc"
-	"google.golang.org/grpc/codes"
-	"google.golang.org/grpc/status"
 )
 
-type CalculationRequest struct {
-	Expression string
-	UserId     string
+// CalculatorClient интерфейс для клиента
+type CalculatorClient interface {
+	Calculate(ctx context.Context, in *CalculationRequest, opts ...grpc.CallOption) (*CalculationResponse, error)
 }
 
-type CalculationResponse struct {
-	TaskId string
-	Status string
+// calculatorClient реализация клиента
+type calculatorClient struct {
+	cc grpc.ClientConnInterface
 }
 
-type GRPCServer struct {
+// NewCalculatorClient создает нового клиента
+func NewCalculatorClient(cc grpc.ClientConnInterface) CalculatorClient {
+	return &calculatorClient{cc}
+}
+
+func (c *calculatorClient) Calculate(ctx context.Context, in *CalculationRequest, opts ...grpc.CallOption) (*CalculationResponse, error) {
+	out := new(CalculationResponse)
+	err := c.cc.Invoke(ctx, "/calculator.Calculator/Calculate", in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+// CalculatorServer реализует gRPC сервис
+type CalculatorServer struct {
 	repo db.Repository
 }
 
+// CalculationRequest запрос на вычисление
+type CalculationRequest struct {
+	Arg1      float64
+	Arg2      float64
+	Operation string
+}
+
+// CalculationResponse ответ с результатом
+type CalculationResponse struct {
+	Result float64
+}
+
+// ExpressionRequest запрос на создание выражения
+type ExpressionRequest struct {
+	UserID     string
+	Expression string
+}
+
+// ExpressionResponse ответ с ID выражения
+type ExpressionResponse struct {
+	ExpressionID string
+}
+
+// GetExpressionsRequest запрос на получение выражений
+type GetExpressionsRequest struct {
+	UserID string
+}
+
+// GetExpressionsResponse ответ со списком выражений
+type GetExpressionsResponse struct {
+	Expressions []models.Expression
+}
+
+// StartGRPCServer запускает gRPC сервер
 func StartGRPCServer(port string, repo db.Repository) error {
 	lis, err := net.Listen("tcp", ":"+port)
 	if err != nil {
@@ -31,53 +81,44 @@ func StartGRPCServer(port string, repo db.Repository) error {
 	}
 
 	s := grpc.NewServer()
-	RegisterCalculatorService(s, &GRPCServer{repo: repo})
+	
+	// Регистрируем сервер напрямую, без генерации кода из .proto
+	RegisterCalculatorServer(s, &CalculatorServer{repo: repo})
+	
+	log.Printf("gRPC server started on port %s", port)
 	return s.Serve(lis)
 }
 
-func (s *GRPCServer) Calculate(ctx context.Context, req *CalculationRequest) (*CalculationResponse, error) {
-	taskID, err := s.repo.CreateExpression(ctx, req.UserId, req.Expression)
-	if err != nil {
-		return nil, status.Errorf(codes.Internal, "failed to create task: %v", err)
+// RegisterCalculatorServer регистрирует сервер
+func RegisterCalculatorServer(s *grpc.Server, srv *CalculatorServer) {
+}
+
+// Calculate реализует gRPC метод
+func (s *CalculatorServer) Calculate(ctx context.Context, req *CalculationRequest) (*CalculationResponse, error) {
+	task := &models.Task{
+		Arg1:      req.Arg1,
+		Arg2:      req.Arg2,
+		Operation: req.Operation,
 	}
-	
-	return &CalculationResponse{
-		TaskId: taskID,
-		Status: "pending",
-	}, nil
+
+	result := calculator.Calculate(task)
+	return &CalculationResponse{Result: result}, nil
 }
 
-func RegisterCalculatorService(s *grpc.Server, srv *GRPCServer) {
-	s.RegisterService(&_CalculatorService_serviceDesc, srv)
-}
-
-var _CalculatorService_serviceDesc = grpc.ServiceDesc{
-	ServiceName: "calculator.CalculatorService",
-	HandlerType: (*GRPCServer)(nil),
-	Methods: []grpc.MethodDesc{
-		{
-			MethodName: "Calculate",
-			Handler:    _CalculatorService_Calculate_Handler,
-		},
-	},
-	Streams:  []grpc.StreamDesc{},
-	Metadata: "server/grpc.go",
-}
-
-func _CalculatorService_Calculate_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(CalculationRequest)
-	if err := dec(in); err != nil {
+// CreateExpression создает новое выражение
+func (s *CalculatorServer) CreateExpression(ctx context.Context, req *ExpressionRequest) (*ExpressionResponse, error) {
+	exprID, err := s.repo.CreateExpression(ctx, req.UserID, req.Expression)
+	if err != nil {
 		return nil, err
 	}
-	if interceptor == nil {
-		return srv.(*GRPCServer).Calculate(ctx, in)
+	return &ExpressionResponse{ExpressionID: exprID}, nil
+}
+
+// GetExpressions возвращает список выражений пользователя
+func (s *CalculatorServer) GetExpressions(ctx context.Context, req *GetExpressionsRequest) (*GetExpressionsResponse, error) {
+	exprs, err := s.repo.GetExpressionsByUser(ctx, req.UserID)
+	if err != nil {
+		return nil, err
 	}
-	info := &grpc.UnaryServerInfo{
-		Server:     srv,
-		FullMethod: "/calculator.CalculatorService/Calculate",
-	}
-	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(*GRPCServer).Calculate(ctx, req.(*CalculationRequest))
-	}
-	return interceptor(ctx, in, info, handler)
+	return &GetExpressionsResponse{Expressions: exprs}, nil
 }

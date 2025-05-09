@@ -2,13 +2,11 @@ package main
 
 import (
 	"log"
-	// "net"
 
 	"github.com/m1tka051209/calculator-service/config"
 	"github.com/m1tka051209/calculator-service/db"
 	"github.com/m1tka051209/calculator-service/server"
 	"github.com/m1tka051209/calculator-service/worker"
-	// "google.golang.org/grpc"
 )
 
 func main() {
@@ -27,5 +25,6 @@ func main() {
 		}
 	}()
 
+	// Запуск воркеров
 	worker.RunWorker(repo, cfg.WorkerPoolSize)
 }
