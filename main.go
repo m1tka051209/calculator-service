@@ -3,7 +3,7 @@ package main
 import (
 	"log"
 	"net/http"
-	
+
 	"github.com/m1tka051209/calculator-service/api"
 	"github.com/m1tka051209/calculator-service/config"
 	"github.com/m1tka051209/calculator-service/db"
@@ -14,9 +14,10 @@ import (
 func main() {
 	cfg := config.Load()
 
+	// Инициализация репозитория
 	repo, err := db.NewSQLiteRepository(cfg.DBPath)
 	if err != nil {
-		log.Fatalf("Failed to initialize database: %v", err)
+		log.Fatalf("Failed to init DB: %v", err)
 	}
 	defer repo.Close()
 
@@ -28,13 +29,9 @@ func main() {
 	}()
 
 	// Запуск HTTP сервера
-	httpHandler := api.StartHTTPGateway()
-	go func() {
-		log.Println("HTTP server starting on :8080")
-		if err := http.ListenAndServe(":8080", httpHandler); err != nil {
-			log.Fatalf("HTTP server failed: %v", err)
-		}
-	}()
+	http.Handle("/", api.StartHTTPGateway())
+	log.Println("HTTP server started on :8080")
+	go http.ListenAndServe(":8080", nil)
 
 	// Запуск воркеров
 	worker.RunWorker(repo, cfg.WorkerPoolSize)

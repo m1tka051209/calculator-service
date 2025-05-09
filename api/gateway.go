@@ -9,38 +9,42 @@ import (
 func StartHTTPGateway() http.Handler {
 	mux := http.NewServeMux()
 
+	// Регистрация
 	mux.HandleFunc("POST /api/v1/register", func(w http.ResponseWriter, r *http.Request) {
 		var req struct {
 			Login    string `json:"login"`
 			Password string `json:"password"`
 		}
 		if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-			respondError(w, http.StatusBadRequest, "Invalid JSON")
+			respondJSON(w, http.StatusBadRequest, map[string]string{"error": "invalid request"})
 			return
 		}
-		w.Header().Set("Content-Type", "application/json")
-		json.NewEncoder(w).Encode(map[string]string{"status": "OK"})
+
+		// Здесь должна быть логика регистрации через ваш репозиторий
+		respondJSON(w, http.StatusOK, map[string]string{"status": "OK"})
 	})
 
+	// Авторизация
 	mux.HandleFunc("POST /api/v1/login", func(w http.ResponseWriter, r *http.Request) {
 		var req struct {
 			Login    string `json:"login"`
 			Password string `json:"password"`
 		}
 		if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-			respondError(w, http.StatusBadRequest, "Invalid JSON")
+			respondJSON(w, http.StatusBadRequest, map[string]string{"error": "invalid request"})
 			return
 		}
-		
-		token, _ := GenerateJWT("user123") // Замените на реальный ID пользователя
-		w.Header().Set("Content-Type", "application/json")
-		json.NewEncoder(w).Encode(map[string]string{"token": token})
+
+		// Здесь должна быть проверка логина/пароля
+		token, _ := GenerateJWT("user123") // Замените на реальный ID
+		respondJSON(w, http.StatusOK, map[string]string{"token": token})
 	})
 
+	// Вычисление выражения
 	mux.HandleFunc("POST /api/v1/calculate", func(w http.ResponseWriter, r *http.Request) {
 		token := strings.TrimPrefix(r.Header.Get("Authorization"), "Bearer ")
 		if _, err := ValidateJWT(token); err != nil {
-			respondError(w, http.StatusUnauthorized, "Unauthorized")
+			respondJSON(w, http.StatusUnauthorized, map[string]string{"error": "unauthorized"})
 			return
 		}
 
@@ -48,27 +52,28 @@ func StartHTTPGateway() http.Handler {
 			Expression string `json:"expression"`
 		}
 		if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-			respondError(w, http.StatusBadRequest, "Invalid JSON")
+			respondJSON(w, http.StatusBadRequest, map[string]string{"error": "invalid request"})
 			return
 		}
 
-		w.Header().Set("Content-Type", "application/json")
-		json.NewEncoder(w).Encode(map[string]interface{}{
+		// Здесь вызов вашего gRPC сервиса
+		respondJSON(w, http.StatusAccepted, map[string]string{
 			"expression_id": "generated-id-123",
 			"status":        "pending",
 		})
 	})
 
+	// Получение выражений
 	mux.HandleFunc("GET /api/v1/expressions", func(w http.ResponseWriter, r *http.Request) {
 		token := strings.TrimPrefix(r.Header.Get("Authorization"), "Bearer ")
 		if _, err := ValidateJWT(token); err != nil {
-			respondError(w, http.StatusUnauthorized, "Unauthorized")
+			respondJSON(w, http.StatusUnauthorized, map[string]string{"error": "unauthorized"})
 			return
 		}
 
-		w.Header().Set("Content-Type", "application/json")
-		json.NewEncoder(w).Encode([]interface{}{
-			map[string]interface{}{
+		// Здесь получение выражений из репозитория
+		respondJSON(w, http.StatusOK, []map[string]interface{}{
+			{
 				"id":          "generated-id-123",
 				"expression":  "2+2*2",
 				"status":      "completed",
@@ -82,8 +87,8 @@ func StartHTTPGateway() http.Handler {
 	return mux
 }
 
-func respondError(w http.ResponseWriter, code int, message string) {
+func respondJSON(w http.ResponseWriter, status int, data interface{}) {
 	w.Header().Set("Content-Type", "application/json")
-	w.WriteHeader(code)
-	json.NewEncoder(w).Encode(map[string]string{"error": message})
+	w.WriteHeader(status)
+	json.NewEncoder(w).Encode(data)
 }
